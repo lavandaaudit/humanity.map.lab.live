@@ -25,14 +25,14 @@ h1 { margin-bottom:20px; font-size:2rem; color:#cfefff; text-align:center; }
 <div class="heatmap" id="heatmap"></div>
 
 <script>
-// ====== Розширені індикатори в реальному часі ======
+// ====== Розширені індикатори ======
 const indicators = [
   // Криптовалюти
   {name:"💰 BTC/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"},
   {name:"💰 ETH/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"},
   {name:"💰 DOGE/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=dogecoin&vs_currencies=usd"},
 
-  // Фінанси
+  // Валюти
   {name:"💱 USD/UAH", type:"finance", api:"https://api.exchangerate.host/latest?base=USD&symbols=UAH"},
   {name:"💱 EUR/UAH", type:"finance", api:"https://api.exchangerate.host/latest?base=EUR&symbols=UAH"},
 
@@ -48,8 +48,8 @@ const indicators = [
   {name:"📰 GDELT UA", type:"politics", api:"https://api.gdeltproject.org/api/v2/events/doc/doc?query=ukraine&format=json"},
 
   // Погода
-  {name:"🌡️ Температура Київ", type:"weather", api:"https://api.open-meteo.com/v1/forecast?latitude=50.45&longitude=30.523&hourly=temperature_2m&current_weather=true"},
-  {name:"💨 Вітер Київ", type:"weather", api:"https://api.open-meteo.com/v1/forecast?latitude=50.45&longitude=30.523&hourly=windspeed_10m&current_weather=true"}
+  {name:"🌡️ Температура Київ", type:"weather", api:"https://api.open-meteo.com/v1/forecast?latitude=50.45&longitude=30.523&current_weather=true"},
+  {name:"💨 Вітер Київ", type:"weather", api:"https://api.open-meteo.com/v1/forecast?latitude=50.45&longitude=30.523&current_weather=true"}
 ];
 
 const heatmap = document.getElementById('heatmap');
@@ -94,18 +94,23 @@ async function fetchIndicator(item){
 // ====== Колірна карта та стан ======
 function getColorAndState(value, type){
   let color='#111', state=1;
-  if(type=="crypto" || type=="finance"){
-    if(value < 20000) {color='#ff0000'; state=0;}
-    else if(value < 40000) {color='#ffaa00'; state=1;}
-    else {color='#00ff00'; state=2;}
+  if(type=="crypto"){
+    if(value < 20000){ color='#ff0000'; state=0; }
+    else if(value < 40000){ color='#ffaa00'; state=1; }
+    else{ color='#00ff00'; state=2; }
+  }
+  if(type=="finance"){
+    if(value < 30){ color='#ff0000'; state=0; }
+    else if(value < 40){ color='#ffaa00'; state=1; }
+    else{ color='#00ff00'; state=2; }
   }
   if(type=="tech" || type=="politics" || type=="social"){
-    if(value > 10){color='#00ff00'; state=2;} else {color='#ffaa00'; state=1;}
+    if(value > 10){ color='#00ff00'; state=2; } else{ color='#ffaa00'; state=1; }
   }
   if(type=="weather"){
-    if(value < 0){color='#ff0000'; state=0;}
-    else if(value < 20){color='#ffaa00'; state=1;}
-    else {color='#00ff00'; state=2;}
+    if(value < 0){ color='#ff0000'; state=0; }
+    else if(value < 20){ color='#ffaa00'; state=1; }
+    else{ color='#00ff00'; state=2; }
   }
   return {color,state};
 }
