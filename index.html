@@ -3,54 +3,56 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ibonarium Heatmap Real-time</title>
+<title>Ibonarium Heatmap - Реальний час</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-  body { background:#000; color:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:100vh; }
-  h1 { margin-bottom:20px; font-size:2rem; color:#cfefff; text-align:center; }
-  .heatmap { display:grid; grid-template-columns:repeat(4,120px); grid-template-rows:repeat(4,120px); gap:10px; }
-  .cell { display:flex; justify-content:center; align-items:center; border-radius:10px; background:#111; font-weight:bold; font-size:1rem; position:relative; transition:all 0.3s ease; cursor:default; color:#fff; }
-  .cell.alert { animation:pulse 1s infinite; }
-  @keyframes pulse { 0% { box-shadow:0 0 5px #ff0000;} 50% { box-shadow:0 0 20px #ff0000;} 100% { box-shadow:0 0 5px #ff0000;} }
-  .tooltip { position:absolute; bottom:110%; background:rgba(0,0,0,0.8); padding:5px 8px; border-radius:5px; font-size:0.8rem; white-space:nowrap; opacity:0; pointer-events:none; transition:0.2s; }
-  .cell:hover .tooltip { opacity:1; }
-  .center-index { grid-column:2 / span 2; grid-row:2 / span 2; font-size:1.5rem; border:2px solid #cfefff; background:#111; display:flex; justify-content:center; align-items:center; border-radius:15px; animation:glow 2s infinite alternate; }
-  @keyframes glow { 0% { box-shadow:0 0 5px #00ffdd;} 100% { box-shadow:0 0 20px #00ffdd;} }
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
+body { background:#000; color:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:100vh; }
+h1 { margin-bottom:20px; font-size:2rem; color:#cfefff; text-align:center; }
+.heatmap { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:10px; width:95%; max-width:800px; }
+.cell { display:flex; flex-direction:column; justify-content:center; align-items:center; border-radius:10px; background:#111; font-weight:bold; font-size:1rem; position:relative; transition:all 0.3s ease; cursor:default; color:#fff; padding:5px; }
+.cell.alert { animation:pulse 1s infinite; }
+@keyframes pulse { 0% { box-shadow:0 0 5px #ff0000;} 50% { box-shadow:0 0 20px #ff0000;} 100% { box-shadow:0 0 5px #ff0000;} }
+.tooltip { position:absolute; bottom:110%; background:rgba(0,0,0,0.8); padding:5px 8px; border-radius:5px; font-size:0.8rem; white-space:nowrap; opacity:0; pointer-events:none; transition:0.2s; }
+.cell:hover .tooltip { opacity:1; }
+.center-index { grid-column:1 / -1; font-size:1.5rem; border:2px solid #cfefff; background:#111; display:flex; justify-content:center; align-items:center; border-radius:15px; animation:glow 2s infinite alternate; margin-top:10px; }
+@keyframes glow { 0% { box-shadow:0 0 5px #00ffdd;} 100% { box-shadow:0 0 20px #00ffdd;} }
+.arrow { font-size:1rem; margin-left:3px; }
 </style>
 </head>
 <body>
 
-<h1>Ibonarium Heatmap - Реальний час</h1>
+<h1>Ibonarium Heatmap</h1>
 <div class="heatmap" id="heatmap"></div>
 
 <script>
-// ====== Список індикаторів, всі відкриті API ======
+// ====== Список індикаторів з українськими назвами і іконками ======
 const indicators = [
-  {name: "BTC/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"},
-  {name: "ETH/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"},
-  {name: "Covid Cases UA", type:"health", api:"https://disease.sh/v3/covid-19/countries/Ukraine"},
-  {name: "Vaccine Rate UA", type:"health", api:"https://disease.sh/v3/covid-19/vaccine/coverage/countries/Ukraine?lastdays=1"},
-  {name: "GitHub React commits", type:"tech", api:"https://api.github.com/repos/facebook/react/commits?per_page=5"},
-  {name: "GDELT Ukraine", type:"politics", api:"https://api.gdeltproject.org/api/v2/events/doc/doc?query=ukraine&format=json"},
-  {name: "Reddit r/ukraine", type:"social", api:"https://www.reddit.com/r/ukraine/top.json?limit=5"}
+  {name: "💰 BTC/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"},
+  {name: "💰 ETH/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"},
+  {name: "🦠 Випадки COVID-19 UA", type:"health", api:"https://disease.sh/v3/covid-19/countries/Ukraine"},
+  {name: "💉 Вакцинація UA", type:"health", api:"https://disease.sh/v3/covid-19/vaccine/coverage/countries/Ukraine?lastdays=1"},
+  {name: "💻 GitHub React commits", type:"tech", api:"https://api.github.com/repos/facebook/react/commits?per_page=5"},
+  {name: "📰 Події GDELT UA", type:"politics", api:"https://api.gdeltproject.org/api/v2/events/doc/doc?query=ukraine&format=json"},
+  {name: "🌐 Reddit r/ukraine", type:"social", api:"https://www.reddit.com/r/ukraine/top.json?limit=5"}
 ];
 
 // ====== Створення клітинок ======
 const heatmap = document.getElementById('heatmap');
+const prevValues = Array(indicators.length).fill(null);
 
 function createCells() {
   indicators.forEach((item,i)=>{
     const cell = document.createElement('div');
     cell.classList.add('cell');
     cell.id = 'cell-'+i;
-    cell.innerHTML = `${item.name}<div class="tooltip">Loading...</div>`;
+    cell.innerHTML = `<div>${item.name}</div><div class="value">---</div><div class="arrow"></div><div class="tooltip">Loading...</div>`;
     heatmap.appendChild(cell);
   });
 
   const center = document.createElement('div');
   center.classList.add('center-index');
   center.id = 'center-index';
-  center.textContent = "AGGREGATE";
+  center.textContent = "АГРЕГАТ";
   heatmap.appendChild(center);
 }
 
@@ -63,7 +65,7 @@ async function fetchIndicator(item){
       case "crypto": 
         return Object.values(data)[0].usd;
       case "health": 
-        if(item.name.includes("Vaccine")) return Object.values(data.timeline)[0];
+        if(item.name.includes("Вакцинація")) return Object.values(data.timeline)[0];
         return data.cases;
       case "tech": 
         return data.length;
@@ -81,7 +83,6 @@ async function fetchIndicator(item){
 
 // ====== Колірна карта ======
 function getColor(value, type){
-  // Спрощена шкала: червоне - погано, жовте - норма, зелене - добре
   if(type=="crypto"){
     if(value < 20000) return '#ff0000';
     if(value < 40000) return '#ffaa00';
@@ -105,12 +106,22 @@ async function updateHeatmap(){
   for(let i=0;i<indicators.length;i++){
     const val = await fetchIndicator(indicators[i]);
     const cell = document.getElementById('cell-'+i);
+    const valueDiv = cell.querySelector('.value');
+    const arrowDiv = cell.querySelector('.arrow');
+
+    // Стрілка зміни
+    if(prevValues[i] !== null){
+      arrowDiv.textContent = val > prevValues[i] ? '▲' : val < prevValues[i] ? '▼' : '';
+    }
+    prevValues[i] = val;
+
+    valueDiv.textContent = val;
     cell.querySelector('.tooltip').textContent = val;
     cell.style.background = getColor(val, indicators[i].type);
     if(val < 0) cell.classList.add('alert'); else cell.classList.remove('alert');
     sum += val;
   }
-  document.getElementById('center-index').textContent = `AGG: ${Math.round(sum)}`;
+  document.getElementById('center-index').textContent = `АГРЕГАТ: ${Math.round(sum)}`;
 }
 
 // ====== Ініціалізація ======
@@ -121,4 +132,3 @@ setInterval(updateHeatmap, 60000); // раз на хвилину
 
 </body>
 </html>
-
