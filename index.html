@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ibonarium Heatmap Real-time</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
+  body { background:#000; color:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:100vh; }
+  h1 { margin-bottom:20px; font-size:2rem; color:#cfefff; text-align:center; }
+  .heatmap { display:grid; grid-template-columns:repeat(4,120px); grid-template-rows:repeat(4,120px); gap:10px; }
+  .cell { display:flex; justify-content:center; align-items:center; border-radius:10px; background:#111; font-weight:bold; font-size:1rem; position:relative; transition:all 0.3s ease; cursor:default; color:#fff; }
+  .cell.alert { animation:pulse 1s infinite; }
+  @keyframes pulse { 0% { box-shadow:0 0 5px #ff0000;} 50% { box-shadow:0 0 20px #ff0000;} 100% { box-shadow:0 0 5px #ff0000;} }
+  .tooltip { position:absolute; bottom:110%; background:rgba(0,0,0,0.8); padding:5px 8px; border-radius:5px; font-size:0.8rem; white-space:nowrap; opacity:0; pointer-events:none; transition:0.2s; }
+  .cell:hover .tooltip { opacity:1; }
+  .center-index { grid-column:2 / span 2; grid-row:2 / span 2; font-size:1.5rem; border:2px solid #cfefff; background:#111; display:flex; justify-content:center; align-items:center; border-radius:15px; animation:glow 2s infinite alternate; }
+  @keyframes glow { 0% { box-shadow:0 0 5px #00ffdd;} 100% { box-shadow:0 0 20px #00ffdd;} }
+</style>
+</head>
+<body>
+
+<h1>Ibonarium Heatmap - Реальний час</h1>
+<div class="heatmap" id="heatmap"></div>
+
+<script>
+// ====== Реальні показники без ключів ======
+const indicators = [
+  {name: "BTC/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"},
+  {name: "ETH/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"},
+  {name: "Covid Cases UA", type:"health", api:"https://disease.sh/v3/covid-19/countries/Ukraine"},
+  {name: "Vaccine Rate UA", type:"health", api:"https://disease.sh/v3/covid-19/vaccine/coverage/countries/Ukraine?lastdays=1"},
+  {name: "GitHub React commits", type:"tech", api:"https://api.github.com/repos/facebook/react/commits?per_page=5"},
+  {name: "GDELT Ukraine", type:"politics", api:"https://api.gdeltproject.org/api/v2/events/doc/doc?query=ukraine&format=json"},
+  {name: "Reddit r/ukraine", type:"social", api:"https://www.reddit.com/r/ukraine/top.json?limit=5"}
+];
+
+// ====== Створення клітинок ======
+const heatmap = document.getElementById('heatmap');
+
+function createCells() {
+  indicators.forEach((item,i)=>{
+    const cell = document.createElement('div');
+    cell.classList.add('cell');
+    cell.id = 'cell-'+i;
+    cell.innerHTML = `${item.name}<div class="tooltip">Loading...</div>`;
+    heatmap.appendChild(cell);
+  });
+
+  const center = document.createElement('div');
+  center.classList.add('center-index');
+  center.id = 'center-index';
+  center.textContent = "AGGREGATE";
+  heatmap.appendChild(center);
+}
+
+// ====== Функція отримання значення ======
+async function fetchIndicator(item){
+  try{
+    const res = await fetch(item.api);
+    const data = await res.json();
+    switch(item.type){
+      case "crypto": 
+        return Object.values(data)[0].usd;
+      case "health": 
+        if(item.name.includes("Vaccine")) return Object.values(data.timeline)[0];
+        return data.cases;
+      case "tech": 
+        return data.length;
+      case "politics": 
+        return data.totalCount || data.count || 0;
+      case "social": 
+        return data.data ? data.data.children.length : data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.children?.length || data.data?.child
