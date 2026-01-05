@@ -27,38 +27,24 @@ h1 { margin-bottom:20px; font-size:2rem; color:#cfefff; text-align:center; }
 <script>
 // ====== Індикатори: крипта, технології, соцмережі, події, погода, кібер, соціальні ======
 const indicators = [
-  // Криптовалюти
   {name:"💰 BTC/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"},
   {name:"💰 ETH/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"},
   {name:"💰 DOGE/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=dogecoin&vs_currencies=usd"},
-
-  // Технології
   {name:"💻 GitHub React commits", type:"tech", api:"https://api.github.com/repos/facebook/react/commits?per_page=5"},
   {name:"💻 GitHub Python commits", type:"tech", api:"https://api.github.com/repos/python/cpython/commits?per_page=5"},
-
-  // Соцмережі
   {name:"🌐 Reddit r/ukraine", type:"social", api:"https://www.reddit.com/r/ukraine/top.json?limit=5"},
   {name:"🌐 Reddit r/worldnews", type:"social", api:"https://www.reddit.com/r/worldnews/top.json?limit=5"},
-
-  // Події
   {name:"📰 GDELT UA", type:"politics", api:"https://api.gdeltproject.org/api/v2/events/doc/doc?query=ukraine&format=json"},
-
-  // Погода / екологія
   {name:"🌡️ Температура Київ", type:"weather", api:"https://api.open-meteo.com/v1/forecast?latitude=50.45&longitude=30.523&current_weather=true"},
   {name:"💨 Вітер Київ", type:"weather", api:"https://api.open-meteo.com/v1/forecast?latitude=50.45&longitude=30.523&current_weather=true"},
-  {name:"🌫️ AQI Київ", type:"air", api:"https://api.waqi.info/feed/kiev/?token=demo"}, // demo token, для реального треба зареєструвати
-
-  // Кібер / вразливості
-  {name:"🛡️ CVE нові", type:"cyber", api:"https://cve.circl.lu/api/last"}, // повертає останні CVE, можна рахувати довжину
-
-  // Соціальні / психологічні
+  {name:"🌫️ AQI Київ", type:"air", api:"https://api.waqi.info/feed/kiev/?token=demo"},
+  {name:"🛡️ CVE нові", type:"cyber", api:"https://cve.circl.lu/api/last"},
   {name:"📈 Google Trends UA", type:"socialtrend", api:"https://trends.google.com/trends/api/dailytrends?hl=uk&geo=UA&ns=15"}
 ];
 
 const heatmap = document.getElementById('heatmap');
 const prevValues = Array(indicators.length).fill(null);
 
-// ====== Створення клітинок ======
 function createCells() {
   indicators.forEach((item,i)=>{
     const cell = document.createElement('div');
@@ -67,7 +53,6 @@ function createCells() {
     cell.innerHTML = `<div>${item.name}</div><div class="value">---</div><div class="arrow"></div><div class="tooltip">Loading...</div>`;
     heatmap.appendChild(cell);
   });
-
   const center = document.createElement('div');
   center.classList.add('center-index');
   center.id = 'center-index';
@@ -75,36 +60,24 @@ function createCells() {
   heatmap.appendChild(center);
 }
 
-// ====== Отримання даних ======
 async function fetchIndicator(item){
   try{
     const res = await fetch(item.api);
     const data = await res.json();
     switch(item.type){
-      case "crypto": 
-        return Object.values(data)[0].usd;
-      case "tech": 
-        return data.length;
-      case "politics": 
-        return data.totalCount || 0;
-      case "social": 
-        return data.data?.children?.length || 0;
-      case "weather": 
-        if(data.current_weather) return data.current_weather.temperature ?? 0;
-        return 0;
-      case "air":
-        // AQI через demo token (приклад)
-        return data.data?.aqi ?? 0;
-      case "cyber":
-        return data.length ?? 0; // кількість останніх CVE
-      case "socialtrend":
-        return data.default?.trendingSearchesDays?.[0]?.trendingSearches?.length ?? 0; // кількість трендів
+      case "crypto": return Object.values(data)[0].usd;
+      case "tech": return data.length;
+      case "politics": return data.totalCount || 0;
+      case "social": return data.data?.children?.length || 0;
+      case "weather": return data.current_weather?.temperature ?? 0;
+      case "air": return data.data?.aqi ?? 0;
+      case "cyber": return data.length ?? 0;
+      case "socialtrend": return data.default?.trendingSearchesDays?.[0]?.trendingSearches?.length ?? 0;
       default: return 0;
     }
-  } catch(e){ console.error(item.name,e); return 0; }
+  } catch(e){ return 0; }
 }
 
-// ====== Колірна карта та стан ======
 function getColorAndState(value, type){
   let color='#111', state=1;
   if(type=="crypto"){
@@ -123,7 +96,6 @@ function getColorAndState(value, type){
   return {color,state};
 }
 
-// ====== Оновлення heatmap ======
 async function updateHeatmap(){
   let totalState = 0;
   for(let i=0;i<indicators.length;i++){
@@ -131,21 +103,17 @@ async function updateHeatmap(){
     const cell = document.getElementById('cell-'+i);
     const valueDiv = cell.querySelector('.value');
     const arrowDiv = cell.querySelector('.arrow');
-
     if(prevValues[i] !== null){
       arrowDiv.textContent = val > prevValues[i] ? '▲' : val < prevValues[i] ? '▼' : '';
     }
     prevValues[i] = val;
-
     valueDiv.textContent = val.toFixed ? val.toFixed(2) : val;
-    cell.querySelector('.tooltip').textContent = val.toFixed ? val.toFixed(2) : val;
-
+    cell.querySelector('.tooltip').textContent = valueDiv.textContent;
     const {color,state} = getColorAndState(val, indicators[i].type);
     cell.style.background=color;
     if(state===0) cell.classList.add('alert'); else cell.classList.remove('alert');
     totalState += state;
   }
-
   const avgState = totalState / indicators.length;
   let systemStatus='Норма';
   if(avgState<0.8) systemStatus='Погано';
@@ -153,10 +121,34 @@ async function updateHeatmap(){
   document.getElementById('center-index').textContent=`Стан системи: ${systemStatus}`;
 }
 
-// ====== Ініціалізація ======
 createCells();
 updateHeatmap();
-setInterval(updateHeatmap, 60000); // раз на хвилину
+setInterval(updateHeatmap, 60000);
 </script>
+
+<!-- ====== ОПИС СИСТЕМИ ====== -->
+<div style="max-width:900px; width:95%; margin:40px auto 20px; padding:20px; color:#cfefff; font-size:0.95rem; line-height:1.6; text-align:left; opacity:0.9;">
+  <h2 style="font-size:1.2rem; margin-bottom:10px; color:#ffffff;">Суб’єктивний стан системи</h2>
+  <p>
+    Ця карта відображає суб’єктивний стан системи — не як точний вимір, а як узагальнене
+    відчуття поточної динаміки світу. Вона поєднує різні сигнали реального часу:
+    активність технологій, інформаційні потоки, екологічні умови та цифрову соціальну взаємодію.
+  </p>
+  <p>
+    Кожен індикатор фіксує локальний рух — напругу, стабільність або зростання.
+    Колір передає якість стану, а зміна напрямку вказує на те, куди система схиляється
+    в цей момент часу.
+  </p>
+  <p>
+    Агрегований показник у центрі не є об’єктивною істиною.
+    Це синтезоване сприйняття — настрій системи, що виникає з суми всіх спостережуваних процесів.
+    Він дозволяє не стільки вимірювати, скільки відчувати.
+  </p>
+  <p>
+    Ця сторінка створена для спостереження й осмислення.
+    Вона не прогнозує і не дає відповідей, але робить видимими ритми теперішнього моменту.
+  </p>
+</div>
+
 </body>
 </html>
