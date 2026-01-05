@@ -78,14 +78,31 @@ async function fetchIndicator(item){
     const res = await fetch(item.api);
     const data = await res.json();
     switch(item.type){
-      case "crypto": return Object.values(data)[0].usd;
-      case "finance": return Object.values(data.rates)[0];
-      case "tech": return data.length;
-      case "politics": return data.totalCount || 0;
-      case "social": return data.data?.children?.length || 0;
-      case "weather": 
-        if(data.current_weather) return data.current_weather.temperature || data.current_weather.windspeed;
+      case "crypto": 
+        return Object.values(data)[0].usd;
+
+      case "finance": 
+        // правильний шлях для курсів
+        const rateKeys = Object.keys(data.rates);
+        if(rateKeys.length>0) return data.rates[rateKeys[0]];
         return 0;
+
+      case "tech": 
+        return data.length;
+
+      case "politics": 
+        return data.totalCount || 0;
+
+      case "social": 
+        return data.data?.children?.length || 0;
+
+      case "weather": 
+        if(data.current_weather){
+          // температура або швидкість вітру
+          return data.current_weather.temperature ?? data.current_weather.windspeed ?? 0;
+        }
+        return 0;
+
       default: return 0;
     }
   } catch(e){ console.error(item.name,e); return 0; }
@@ -129,8 +146,8 @@ async function updateHeatmap(){
     }
     prevValues[i] = val;
 
-    valueDiv.textContent = val;
-    cell.querySelector('.tooltip').textContent = val;
+    valueDiv.textContent = val.toFixed ? val.toFixed(2) : val;
+    cell.querySelector('.tooltip').textContent = val.toFixed ? val.toFixed(2) : val;
 
     const {color,state} = getColorAndState(val, indicators[i].type);
     cell.style.background=color;
