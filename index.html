@@ -25,21 +25,19 @@ h1 { margin-bottom:20px; font-size:2rem; color:#cfefff; text-align:center; }
 <div class="heatmap" id="heatmap"></div>
 
 <script>
-// ====== Список індикаторів з українськими назвами і іконками ======
+// ====== Індикатори без COVID ======
 const indicators = [
   {name: "💰 BTC/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"},
   {name: "💰 ETH/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"},
-  {name: "🦠 Випадки COVID-19 UA", type:"health", api:"https://disease.sh/v3/covid-19/countries/Ukraine"},
-  {name: "💉 Вакцинація UA", type:"health", api:"https://disease.sh/v3/covid-19/vaccine/coverage/countries/Ukraine?lastdays=1"},
   {name: "💻 GitHub React commits", type:"tech", api:"https://api.github.com/repos/facebook/react/commits?per_page=5"},
   {name: "📰 Події GDELT UA", type:"politics", api:"https://api.gdeltproject.org/api/v2/events/doc/doc?query=ukraine&format=json"},
   {name: "🌐 Reddit r/ukraine", type:"social", api:"https://www.reddit.com/r/ukraine/top.json?limit=5"}
 ];
 
-// ====== Створення клітинок ======
 const heatmap = document.getElementById('heatmap');
 const prevValues = Array(indicators.length).fill(null);
 
+// ====== Створення клітинок ======
 function createCells() {
   indicators.forEach((item,i)=>{
     const cell = document.createElement('div');
@@ -52,7 +50,7 @@ function createCells() {
   const center = document.createElement('div');
   center.classList.add('center-index');
   center.id = 'center-index';
-  center.textContent = "АГРЕГАТ";
+  center.textContent = "Стан системи: ---";
   heatmap.appendChild(center);
 }
 
@@ -64,9 +62,6 @@ async function fetchIndicator(item){
     switch(item.type){
       case "crypto": 
         return Object.values(data)[0].usd;
-      case "health": 
-        if(item.name.includes("Вакцинація")) return Object.values(data.timeline)[0];
-        return data.cases;
       case "tech": 
         return data.length;
       case "politics": 
@@ -81,28 +76,26 @@ async function fetchIndicator(item){
   }
 }
 
-// ====== Колірна карта ======
-function getColor(value, type){
+// ====== Колірна карта та стан ======
+function getColorAndState(value, type){
+  // повертає {color, state: 0-погано,1-норма,2-добре}
+  let color = '#111';
+  let state = 1;
   if(type=="crypto"){
-    if(value < 20000) return '#ff0000';
-    if(value < 40000) return '#ffaa00';
-    return '#00ff00';
-  }
-  if(type=="health"){
-    if(value > 100000) return '#ff0000';
-    if(value > 50000) return '#ffaa00';
-    return '#00ff00';
+    if(value < 20000){ color='#ff0000'; state=0; }
+    else if(value < 40000){ color='#ffaa00'; state=1; }
+    else { color='#00ff00'; state=2; }
   }
   if(type=="tech" || type=="politics" || type=="social"){
-    if(value > 10) return '#00ff00';
-    return '#ffaa00';
+    if(value > 10){ color='#00ff00'; state=2; }
+    else { color='#ffaa00'; state=1; }
   }
-  return '#111';
+  return {color,state};
 }
 
-// ====== Оновлення клітинок ======
+// ====== Оновлення heatmap ======
 async function updateHeatmap(){
-  let sum = 0;
+  let totalState = 0;
   for(let i=0;i<indicators.length;i++){
     const val = await fetchIndicator(indicators[i]);
     const cell = document.getElementById('cell-'+i);
@@ -117,18 +110,28 @@ async function updateHeatmap(){
 
     valueDiv.textContent = val;
     cell.querySelector('.tooltip').textContent = val;
-    cell.style.background = getColor(val, indicators[i].type);
-    if(val < 0) cell.classList.add('alert'); else cell.classList.remove('alert');
-    sum += val;
+
+    const {color,state} = getColorAndState(val, indicators[i].type);
+    cell.style.background = color;
+    if(state===0) cell.classList.add('alert'); else cell.classList.remove('alert');
+
+    totalState += state;
   }
-  document.getElementById('center-index').textContent = `АГРЕГАТ: ${Math.round(sum)}`;
+
+  // Середній стан системи
+  const avgState = totalState / indicators.length;
+  let systemStatus = 'Норма';
+  if(avgState < 0.8) systemStatus='Погано';
+  else if(avgState > 1.5) systemStatus='Добре';
+
+  document.getElementById('center-index').textContent = `Стан системи: ${systemStatus}`;
 }
 
 // ====== Ініціалізація ======
 createCells();
 updateHeatmap();
-setInterval(updateHeatmap, 60000); // раз на хвилину
-</script>
+setInterval(updateHeatmap, 60000); // оновлення кожну хвилину
 
+</script>
 </body>
 </html>
