@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ibonarium Heatmap - Реальний час</title>
+<title>Ibonarium Heatmap - Ріалтайм</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
 body { background:#000; color:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; min-height:100vh; }
 h1 { margin-bottom:20px; font-size:2rem; color:#cfefff; text-align:center; }
-.heatmap { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:10px; width:95%; max-width:800px; }
+.heatmap { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:10px; width:95%; max-width:1000px; }
 .cell { display:flex; flex-direction:column; justify-content:center; align-items:center; border-radius:10px; background:#111; font-weight:bold; font-size:1rem; position:relative; transition:all 0.3s ease; cursor:default; color:#fff; padding:5px; }
 .cell.alert { animation:pulse 1s infinite; }
 @keyframes pulse { 0% { box-shadow:0 0 5px #ff0000;} 50% { box-shadow:0 0 20px #ff0000;} 100% { box-shadow:0 0 5px #ff0000;} }
@@ -25,13 +25,31 @@ h1 { margin-bottom:20px; font-size:2rem; color:#cfefff; text-align:center; }
 <div class="heatmap" id="heatmap"></div>
 
 <script>
-// ====== Індикатори без COVID ======
+// ====== Розширені індикатори в реальному часі ======
 const indicators = [
-  {name: "💰 BTC/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"},
-  {name: "💰 ETH/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"},
-  {name: "💻 GitHub React commits", type:"tech", api:"https://api.github.com/repos/facebook/react/commits?per_page=5"},
-  {name: "📰 Події GDELT UA", type:"politics", api:"https://api.gdeltproject.org/api/v2/events/doc/doc?query=ukraine&format=json"},
-  {name: "🌐 Reddit r/ukraine", type:"social", api:"https://www.reddit.com/r/ukraine/top.json?limit=5"}
+  // Криптовалюти
+  {name:"💰 BTC/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"},
+  {name:"💰 ETH/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"},
+  {name:"💰 DOGE/USD", type:"crypto", api:"https://api.coingecko.com/api/v3/simple/price?ids=dogecoin&vs_currencies=usd"},
+
+  // Фінанси
+  {name:"💱 USD/UAH", type:"finance", api:"https://api.exchangerate.host/latest?base=USD&symbols=UAH"},
+  {name:"💱 EUR/UAH", type:"finance", api:"https://api.exchangerate.host/latest?base=EUR&symbols=UAH"},
+
+  // Технології
+  {name:"💻 GitHub React commits", type:"tech", api:"https://api.github.com/repos/facebook/react/commits?per_page=5"},
+  {name:"💻 GitHub Python commits", type:"tech", api:"https://api.github.com/repos/python/cpython/commits?per_page=5"},
+
+  // Соцмережі
+  {name:"🌐 Reddit r/ukraine", type:"social", api:"https://www.reddit.com/r/ukraine/top.json?limit=5"},
+  {name:"🌐 Reddit r/worldnews", type:"social", api:"https://www.reddit.com/r/worldnews/top.json?limit=5"},
+
+  // Події
+  {name:"📰 GDELT UA", type:"politics", api:"https://api.gdeltproject.org/api/v2/events/doc/doc?query=ukraine&format=json"},
+
+  // Погода
+  {name:"🌡️ Температура Київ", type:"weather", api:"https://api.open-meteo.com/v1/forecast?latitude=50.45&longitude=30.523&hourly=temperature_2m&current_weather=true"},
+  {name:"💨 Вітер Київ", type:"weather", api:"https://api.open-meteo.com/v1/forecast?latitude=50.45&longitude=30.523&hourly=windspeed_10m&current_weather=true"}
 ];
 
 const heatmap = document.getElementById('heatmap');
@@ -60,35 +78,34 @@ async function fetchIndicator(item){
     const res = await fetch(item.api);
     const data = await res.json();
     switch(item.type){
-      case "crypto": 
-        return Object.values(data)[0].usd;
-      case "tech": 
-        return data.length;
-      case "politics": 
-        return data.totalCount || 0;
-      case "social": 
-        return data.data?.children?.length || 0;
+      case "crypto": return Object.values(data)[0].usd;
+      case "finance": return Object.values(data.rates)[0];
+      case "tech": return data.length;
+      case "politics": return data.totalCount || 0;
+      case "social": return data.data?.children?.length || 0;
+      case "weather": 
+        if(data.current_weather) return data.current_weather.temperature || data.current_weather.windspeed;
+        return 0;
       default: return 0;
     }
-  } catch(e){
-    console.error(item.name,e);
-    return 0;
-  }
+  } catch(e){ console.error(item.name,e); return 0; }
 }
 
 // ====== Колірна карта та стан ======
 function getColorAndState(value, type){
-  // повертає {color, state: 0-погано,1-норма,2-добре}
-  let color = '#111';
-  let state = 1;
-  if(type=="crypto"){
-    if(value < 20000){ color='#ff0000'; state=0; }
-    else if(value < 40000){ color='#ffaa00'; state=1; }
-    else { color='#00ff00'; state=2; }
+  let color='#111', state=1;
+  if(type=="crypto" || type=="finance"){
+    if(value < 20000) {color='#ff0000'; state=0;}
+    else if(value < 40000) {color='#ffaa00'; state=1;}
+    else {color='#00ff00'; state=2;}
   }
   if(type=="tech" || type=="politics" || type=="social"){
-    if(value > 10){ color='#00ff00'; state=2; }
-    else { color='#ffaa00'; state=1; }
+    if(value > 10){color='#00ff00'; state=2;} else {color='#ffaa00'; state=1;}
+  }
+  if(type=="weather"){
+    if(value < 0){color='#ff0000'; state=0;}
+    else if(value < 20){color='#ffaa00'; state=1;}
+    else {color='#00ff00'; state=2;}
   }
   return {color,state};
 }
@@ -102,7 +119,6 @@ async function updateHeatmap(){
     const valueDiv = cell.querySelector('.value');
     const arrowDiv = cell.querySelector('.arrow');
 
-    // Стрілка зміни
     if(prevValues[i] !== null){
       arrowDiv.textContent = val > prevValues[i] ? '▲' : val < prevValues[i] ? '▼' : '';
     }
@@ -112,25 +128,22 @@ async function updateHeatmap(){
     cell.querySelector('.tooltip').textContent = val;
 
     const {color,state} = getColorAndState(val, indicators[i].type);
-    cell.style.background = color;
+    cell.style.background=color;
     if(state===0) cell.classList.add('alert'); else cell.classList.remove('alert');
-
     totalState += state;
   }
 
-  // Середній стан системи
   const avgState = totalState / indicators.length;
-  let systemStatus = 'Норма';
-  if(avgState < 0.8) systemStatus='Погано';
-  else if(avgState > 1.5) systemStatus='Добре';
-
-  document.getElementById('center-index').textContent = `Стан системи: ${systemStatus}`;
+  let systemStatus='Норма';
+  if(avgState<0.8) systemStatus='Погано';
+  else if(avgState>1.5) systemStatus='Добре';
+  document.getElementById('center-index').textContent=`Стан системи: ${systemStatus}`;
 }
 
 // ====== Ініціалізація ======
 createCells();
 updateHeatmap();
-setInterval(updateHeatmap, 60000); // оновлення кожну хвилину
+setInterval(updateHeatmap, 60000); // раз на хвилину
 
 </script>
 </body>
